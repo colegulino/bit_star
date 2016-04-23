@@ -24,6 +24,10 @@ class SimpleEnvironment(object):
 
         self.p = 0.4
 
+        self.space_measure = 1 # for real numbers
+        self.unit_ball_measure = numpy.pi # for 2D space with a radius of 1
+        self.C = numpy.array([[1, 0], [0,1]])
+
     def GetSuccessors(self, node_id):
 
         successors = []
@@ -192,6 +196,13 @@ class SimpleEnvironment(object):
 
         return numpy.array(short_path)
 
+    def GetEllipsoidScale(self, c_max, c_min):
+        scale = numpy.array([[1, 0], [0,1]])
+        scale[0,0] = c_max / 2
+        scale[1,1] = ((c_max**2 - c_min**2)**0.5)/2 
+
+        return scale
+
     def InitializePlot(self, goal_config):
         self.fig = pl.figure()
         pl.xlim([self.lower_limits[0], self.upper_limits[0]])
@@ -223,5 +234,4 @@ class SimpleEnvironment(object):
                 [sconfig[1], econfig[1]],
                 'k.-', linewidth=2.5)
         pl.draw()
-
         

@@ -92,15 +92,15 @@ class RRTConnectPlanner(object):
                     if(numpy.linalg.norm(v_config - curr_config,2) <= self.r):
                         possible_neighbors.append((vid, v_config))
 
-            # Add an edge to the edge queue if the path might improve the solution
-            for neighbor in possible_neighbors:
-                sample_id = neighbor[0]
-                sample_config = neighbor[1]
-                estimated_f_score = self.planning_env.ComputeDistance(self.start_id, vid) + \
-                 self.planning_env.ComputeDistance(vid, sample_id) + \ 
-                 self.planning_env.ComputeHeuristicCost(sample_id, self.goal_id)
-                if estimated_f_score < g_score[self.goal_id] and (self.g_scores[vid] + self.planning_env.ComputeDistance(vid,sample_id)) < g_scores[sample_id]:
-                    self.edge_queue.append(vid, sample_id)
+                # Add an edge to the edge queue if the path might improve the solution
+                for neighbor in possible_neighbors:
+                    sample_id = neighbor[0]
+                    sample_config = neighbor[1]
+                    estimated_f_score = self.planning_env.ComputeDistance(self.start_id, vid) + \
+                     self.planning_env.ComputeDistance(vid, sample_id) + \ 
+                     self.planning_env.ComputeHeuristicCost(sample_id, self.goal_id)
+                    if estimated_f_score < g_score[self.goal_id] and (self.g_scores[vid] + self.planning_env.ComputeDistance(vid,sample_id)) < g_scores[sample_id]:
+                        self.edge_queue.append(vid, sample_id)
 
         except(KeyError):
             print "Couldn't find key"
@@ -176,10 +176,37 @@ class RRTConnectPlanner(object):
 
         return sample_id, self.samples[sample_id]
 
-    def Sample(self, m, goal_g_score = float("inf")):
-        # Initially just uniformly sample
-        for i in xrange(0, m + 1):
-            random_config = self.planning_env.GenerateRandomConfiguration()
-            random_id = self.planning_env.discrete_env.ConfigurationToNodeId(random_config)
-            self.samples[random_id] = random_config
+    def Sample(self, m, c_max = float("inf")):
+        new_samples = dict()
+        if c_max < float("inf"):
+            c_min = self.planning_env.ComputeDistance(self.start_config, self.goal_config)
+            x_center = (self.start_config + self.goal_config) / 2
+            # Get a random sample form the unit ball
+            X_ball = self.SampleUnitNBall(m)
+            # scale the unit ball
+            scale = self.planning_env.GetEllipsoidScale(c_max, c_min)
+            points_scale = np.dot(points_d, scale)
+            # Translate them to the center
+            points_trans = points_scale + x_center 
+            # generate the dictionary
+            for point in points_trans:
+                node_id = self.planning_env.discrete_env.ConfigurationToNodeId(points_trans)
+                new_samples[node_id] = numpy.array(point)
+        else:
+            # Initially just uniformly sample
+            for i in xrange(0, m + 1):
+                random_config = self.planning_env.GenerateRandomConfiguration()
+                random_id = self.planning_env.discrete_env.ConfigurationToNodeId(random_config)
+                new_samples[random_id] = random_config
+        return new_samples
+
+    def SampleUnitNBall(self, m):
+       points = np.random.uniform(-1, 1, [m*2, self.planning_env.dimension])
+       points = list(points)
+       points = [point for point in pointsl if np.linalg.norm(point,2) < 1]
+       points = numpy.array(points)
+       return points[0:m, self.planning_env.dimension]
+
+ 
+
 
