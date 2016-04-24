@@ -13,7 +13,8 @@ from AStarPlanner import AStarPlanner
 from DepthFirstPlanner import DepthFirstPlanner
 from BreadthFirstPlanner import BreadthFirstPlanner
 from HeuristicRRTPlanner import HeuristicRRTPlanner
-from RRTPlanner2 import RRTPlanner
+from BITStarPlanner import BITStarPlanner
+
 def main(robot, planning_env, planner):
 
     raw_input('Press any key to begin planning')
@@ -105,10 +106,7 @@ if __name__ == "__main__":
         visualize = False
     elif args.robot == 'simple':
         robot = SimpleRobot(env)
-        planning_env = SimpleEnvironment(robot, args.resolution)
-    elif args.robot == 'simple2':
-        robot = SimpleRobot(env)
-        planning_env = SimpleEnvironment2(robot)    
+        planning_env = SimpleEnvironment(robot, args.resolution) 
     else:
         print 'Unknown robot option: %s' % args.robot
         exit(0)
@@ -124,6 +122,8 @@ if __name__ == "__main__":
         planner = HeuristicRRTPlanner(planning_env, visualize)
     elif args.planner == 'rrt':
         planner = RRTPlanner(planning_env, visualize)
+    elif args.planner == 'bitstar':
+        planner = BITStarPlanner(planning_env, visualize)
     else:
         print 'Unknown planner option: %s' % args.planner
         exit(0)
