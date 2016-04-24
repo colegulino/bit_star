@@ -157,7 +157,7 @@ class SimpleEnvironment(object):
         y = numpy.linspace(start_config[1], end_config[1], num=steps) # Get the interpolated y values
         # Check the interpolated path for collisions
         for i in xrange(0, len(x)):
-            if(self.collision_check(x[i], y[i]) == True)
+            if(self.collision_check(x[i], y[i]) == True):
                 if(i == 0):
                     return None
                 return numpy.vstack((x[0:i], y[0:i])).transpose() # Send path up until collision
@@ -187,7 +187,7 @@ class SimpleEnvironment(object):
         #    return True
         #else:
         #    return False
-        return !(self.robot.GetEnv().CheckCollision(self.robot, self.table))
+        return not (self.robot.GetEnv().CheckCollision(self.robot, self.table))
         
     def ShortenPath(self, path, timeout=5.0):
         
