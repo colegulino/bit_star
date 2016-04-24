@@ -203,8 +203,10 @@ class RRTConnectPlanner(object):
     def SampleUnitNBall(self, m):
        points = np.random.uniform(-1, 1, [m*2, self.planning_env.dimension])
        points = list(points)
-       points = [point for point in pointsl if np.linalg.norm(point,2) < 1]
+       points = [point for point in points if np.linalg.norm(point,2) < 1]
        points = numpy.array(points)
+       points = list(points)
+       points = [point for point in points if self.planning_env.ValidConfig(point)]
        return points[0:m, self.planning_env.dimension]
 
  

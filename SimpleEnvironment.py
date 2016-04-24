@@ -157,7 +157,7 @@ class SimpleEnvironment(object):
         y = numpy.linspace(start_config[1], end_config[1], num=steps) # Get the interpolated y values
         # Check the interpolated path for collisions
         for i in xrange(0, len(x)):
-            if(self.collision_check(x[i], y[i]) == True):
+            if(self.collision_check(x[i], y[i]) == True)
                 if(i == 0):
                     return None
                 return numpy.vstack((x[0:i], y[0:i])).transpose() # Send path up until collision
@@ -172,6 +172,22 @@ class SimpleEnvironment(object):
         collision = self.robot.GetEnv().CheckCollision(self.robot, self.table)
         self.robot.SetTransform(numpy.eye(4))
         return collision
+
+    def ValidConfig(self, config):
+        if config[0] < lower_limits[0] or config[1] < lower_limits[1]:
+            return False
+        if config[0] > upper_limits[0] or config[1] > upper_limits[1]:
+            return False
+        new_pose = numpy.array([[1, 0, 0, config[0]],
+                                    [0, 1, 0, config[1]],
+                                    [0, 0, 1, 0     ],
+                                    [0, 0, 0, 1     ]])
+        self.robot.SetTransform(new_pose)
+        #if(self.robot.GetEnv().CheckCollision(robo, self.table) == False):
+        #    return True
+        #else:
+        #    return False
+        return !(self.robot.GetEnv().CheckCollision(self.robot, self.table))
         
     def ShortenPath(self, path, timeout=5.0):
         
