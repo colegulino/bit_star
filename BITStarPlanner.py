@@ -49,42 +49,46 @@ class BITStarPlanner(object):
         max_iter = 100000
 
         print "Start ID: ", self.start_id
+        print "Goal ID: ", self.goal_id
 
+        self.r = 2.0
         # Initalize the g_score of the goal
         # run until done
+        found_goal = False
         while(iterations < max_iter):
+            # Add the start of a new batch
             if len(self.vertex_queue) == 0 and len(self.edge_queue) == 0:
-                # Prune the tree
-                self.Prune(self.g_scores[self.goal_id])
-                # Add values to the samples
-                self.samples = self.Sample(m=20, c_max=self.g_scores[self.goal_id])
+                if iterations == 0:
+                    self.samples.update(self.Sample(m=100, c_max=self.g_scores[self.goal_id]))
+
+                if found_goal:
+                    self.r *= 0.8
+                    print "New Batch"
+                    # Prune the tree
+                    self.Prune(self.g_scores[self.goal_id])
+                    # Add values to the samples
+                    self.samples.update(self.Sample(m=100, c_max=self.g_scores[self.goal_id]))
+                    print "Radius: ", self.r
+
                 # Make the old vertices the new vertices
                 self.v_old += self.tree.vertices.keys()
-                # Add the vertices to the 
+                # Add the vertices to the vertex queue
                 self.vertex_queue += self.tree.vertices.keys()
                 # Change the size of the radius
-                self.r = self.radius(len(self.tree.vertices) + len(self.samples))
+                #self.r = self.radius(len(self.tree.vertices) + len(self.samples))
 
             # Expand the best vertices until an edge is better than the vertex
             while(self.BestVertexQueueValue() <= self.BestEdgeQueueValue()):
                 self.ExpandVertex(self.BestInVertexQueue())
 
+            print "Vertex Queue: ", self.vertex_queue
             # Add the best edge to the tree 
             best_edge = self.BestInEdgeQueue()
             self.edge_queue.remove(best_edge)
             # See if it can improve the solution
-            try:
-                estimated_cost_of_vertex = self.g_scores[best_edge[0]] + self.planning_env.ComputeDistance(best_edge[0], best_edge[1]) + self.planning_env.ComputeHeuristicCost(best_edge[1], self.goal_id)
-            except(KeyError):
-                estimated_cost_of_vertex = self.planning_env.ComputeDistance(self.start_id, best_edge[0]) + self.planning_env.ComputeDistance(best_edge[0], best_edge[1]) + self.planning_env.ComputeHeuristicCost(best_edge[1], self.goal_id)
-            try:
-                estimated_cost_of_edge = self.planning_env.ComputeDistance(self.start_id,best_edge[0]) + abs(self.g_scores[best_edge[0]] - self.g_scores[best_edge[1]]) + self.planning_env.ComputeHeuristicCost(best_edge[1], self.goal_id)
-            except(KeyError):
-                estimated_cost_of_edge = self.planning_env.ComputeDistance(self.start_id,best_edge[0]) + abs(self.planning_env.ComputeDistance(self.start_id,best_edge[0]) - self.planning_env.ComputeDistance(self.start_id,best_edge[1])) + self.planning_env.ComputeHeuristicCost(best_edge[1], self.goal_id)
-            try:
-                actual_cost_of_edge = self.g_scores[best_edge[0]] + abs(self.g_scores[best_edge[0]]-self.g_scores[best_edge[1]])
-            except(KeyError):
-                actual_cost_of_edge = self.planning_env.ComputeDistance(self.start_id, best_edge[0]) + abs(self.planning_env.ComputeDistance(self.start_id,best_edge[0]) - self.planning_env.ComputeDistance(self.start_id,best_edge[1]))
+            estimated_cost_of_vertex = self.g_scores[best_edge[0]] + self.planning_env.ComputeDistance(best_edge[0], best_edge[1]) + self.planning_env.ComputeHeuristicCost(best_edge[1], self.goal_id)
+            estimated_cost_of_edge = self.planning_env.ComputeDistance(self.start_id,best_edge[0]) + self.planning_env.ComputeDistance(best_edge[0], best_edge[1]) + self.planning_env.ComputeHeuristicCost(best_edge[1], self.goal_id)
+            actual_cost_of_edge = self.g_scores[best_edge[0]] + self.planning_env.ComputeDistance(best_edge[0], best_edge[1])
 
             if(estimated_cost_of_vertex < self.g_scores[self.goal_id]):
                 if(estimated_cost_of_edge < self.g_scores[self.goal_id]):
@@ -93,7 +97,7 @@ class BITStarPlanner(object):
                         first_config = self.planning_env.discrete_env.NodeIdToConfiguration(best_edge[0])
                         next_config = self.planning_env.discrete_env.NodeIdToConfiguration(best_edge[1])
                         path = self.con(first_config, next_config)
-                        if len(path) == 0: # no path
+                        if path == None or len(path) == 0: # no path
                             continue
                         next_config = path[len(path)-1,:]
                         last_config_in_path_id = self.planning_env.discrete_env.ConfigurationToNodeId(next_config)
@@ -103,7 +107,6 @@ class BITStarPlanner(object):
                             for sid, eid in self.tree.edges.iteritems():
                                 if eid == best_edge[1]:
                                     edges_to_delete.append(sid)
-                                    #del self.tree.edges[sid]
                             for sid in edges_to_delete:
                                 del self.tree.edges[sid]
                         else:
@@ -112,6 +115,9 @@ class BITStarPlanner(object):
                             except(KeyError):
                                 pass
                             eid = self.tree.AddVertex(next_config)
+                        if eid == self.goal_id:
+                            found_goal = True
+
                         self.tree.AddEdge(best_edge[0], best_edge[1])
 
                         g_score = self.planning_env.ComputeDistance(best_edge[0], best_edge[1])
@@ -177,8 +183,8 @@ class BITStarPlanner(object):
                 sample_id = neighbor[0]
                 sample_config = neighbor[1]
                 estimated_f_score = self.planning_env.ComputeDistance(self.start_id, vid) + self.planning_env.ComputeDistance(vid, sample_id) + self.planning_env.ComputeHeuristicCost(sample_id, self.goal_id)
-                if estimated_f_score < g_score[self.goal_id] and (self.g_scores[vid] + self.planning_env.ComputeDistance(vid,sample_id)) < g_scores[sample_id]:
-                    self.edge_queue.append(vid, sample_id)
+                if estimated_f_score < self.g_scores[self.goal_id] and (self.g_scores[vid] + self.planning_env.ComputeDistance(vid,sample_id)) < self.g_scores[sample_id]:
+                    self.edge_queue.append((vid, sample_id))
 
         #print "Edge queue after expansion on vertices: ", self.edge_queue
 
@@ -227,7 +233,7 @@ class BITStarPlanner(object):
     '''
     def radius(self, q):
         eta = 2.0 # tuning parameter
-        dimension = len(self.planning_env.lower_limits) # dimension of problem
+        dimension = len(self.planning_env.lower_limits) + 0.0 # dimension of problem
         space_measure = self.planning_env.space_measure # volume of the space
         unit_ball_measure = self.planning_env.unit_ball_measure # volume of the dimension of the unit ball
 
@@ -256,12 +262,12 @@ class BITStarPlanner(object):
             X_ball = self.SampleUnitNBall(m)
             # scale the unit ball
             scale = self.planning_env.GetEllipsoidScale(c_max, c_min)
-            points_scale = np.dot(points_d, scale)
+            points_scale = numpy.dot(X_ball, scale)
             # Translate them to the center
             points_trans = points_scale + x_center 
             # generate the dictionary
             for point in points_trans:
-                node_id = self.planning_env.discrete_env.ConfigurationToNodeId(points_trans)
+                node_id = self.planning_env.discrete_env.ConfigurationToNodeId(numpy.array(point))
                 new_samples[node_id] = numpy.array(point)
         else:
             # Initially just uniformly sample
@@ -272,22 +278,24 @@ class BITStarPlanner(object):
         return new_samples
 
     def SampleUnitNBall(self, m):
-        points = np.random.uniform(-1, 1, [m*2, self.planning_env.dimension])
+        points = numpy.random.uniform(-1, 1, [m*2, self.planning_env.dimension])
         points = list(points)
-        points = [point for point in points if np.linalg.norm(point,2) < 1]
+        points = [point for point in points if numpy.linalg.norm(point,2) < 1]
         points = numpy.array(points)
         points = list(points)
         points = [point for point in points if self.planning_env.ValidConfig(point)]
-        return points[0:m, self.planning_env.dimension]
+        points = numpy.array(points)
+        print "Shape of points: ", numpy.shape(points)
+        return points[0:m,:]
 
     def BestVertexQueueValue(self):
         # Return the best value in the Queue by score g_tau[v] + h[v]
         if(len(self.vertex_queue) == 0): # Edge Case
             return float("inf")
-        print "Vertex Queue before: ", self.vertex_queue
+        #print "Vertex Queue before: ", self.vertex_queue
         values = [self.g_scores[v] + self.planning_env.ComputeHeuristicCost(v,self.goal_id) for v in self.vertex_queue]
         values.sort()
-        print "Vertex queue after sorting: ", self.vertex_queue
+        #print "Vertex queue after sorting: ", self.vertex_queue
         #print "Vertex queue G_score: ", self.g_scores[self.vertex_queue[0]] + self.planning_env.ComputeHeuristicCost(self.vertex_queue[0], self.goal_id)
         #print "Values in vertex queue ", values
         return values[0]
@@ -297,7 +305,7 @@ class BITStarPlanner(object):
             return float("inf")
         # Return the best value in the queue by score g_tau[v] + c(v,x) + h(x)
         values = [self.g_scores[e[0]] + self.planning_env.ComputeDistance(e[0], e[1]) + self.planning_env.ComputeHeuristicCost(e[1], self.goal_id) for e in self.edge_queue]
-        values.sort()
+        values.sort(reverse=True)
         return values[0]
 
     def BestInEdgeQueue(self):

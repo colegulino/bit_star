@@ -27,6 +27,7 @@ class SimpleEnvironment(object):
         self.space_measure = 1 # for real numbers
         self.unit_ball_measure = numpy.pi # for 2D space with a radius of 1
         self.C = numpy.array([[1, 0], [0,1]])
+        self.dimension = len(self.lower_limits)
 
     def GetSuccessors(self, node_id):
 
@@ -174,9 +175,9 @@ class SimpleEnvironment(object):
         return collision
 
     def ValidConfig(self, config):
-        if config[0] < lower_limits[0] or config[1] < lower_limits[1]:
+        if config[0] < self.lower_limits[0] or config[1] < self.lower_limits[1]:
             return False
-        if config[0] > upper_limits[0] or config[1] > upper_limits[1]:
+        if config[0] > self.upper_limits[0] or config[1] > self.upper_limits[1]:
             return False
         new_pose = numpy.array([[1, 0, 0, config[0]],
                                     [0, 1, 0, config[1]],
