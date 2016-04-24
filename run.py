@@ -45,15 +45,15 @@ def main(robot, planning_env, planner):
     plan_time = plan_time + (time.time() - plan_start_time)
     path_len = path_len + len(plan)
 
-    plan_short = planning_env.ShortenPath(plan)
+    #plan_short = planning_env.ShortenPath(plan)
     # for k in range(0, len(plan_short)-1):
     #    short_plan_dist += numpy.linalg.norm(plan_short[k,:] - plan_short[k+1,:])
-    short_path_len = short_path_len + len(plan_short)
+    #short_path_len = short_path_len + len(plan_short)
 
     print ('Plan Time: ', plan_time/n)
     print ('Path Vertices: ', path_len/n)
     print "Euclidean Distance of Long Path: ", plan_dist
-    print ('Short Path Vertices: ', short_path_len/n)
+    #print ('Short Path Vertices: ', short_path_len/n)
     print "Euclidean Distance of Shortened Path: ", short_plan_dist
     print "Nodes expanded: ", nodes_expanded
 

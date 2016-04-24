@@ -46,11 +46,12 @@ class BITStarPlanner(object):
 
         # Specifies the number of iterations
         iterations = 0
-        max_iter = 100000
+        max_iter = 2
 
         print "Start ID: ", self.start_id
         print "Goal ID: ", self.goal_id
 
+        self.samples.update(self.Sample(m=100))
         self.r = 2.0
         # Initalize the g_score of the goal
         # run until done
@@ -58,33 +59,36 @@ class BITStarPlanner(object):
         while(iterations < max_iter):
             # Add the start of a new batch
             if len(self.vertex_queue) == 0 and len(self.edge_queue) == 0:
-                if iterations == 0:
-                    self.samples.update(self.Sample(m=100, c_max=self.g_scores[self.goal_id]))
-
-                if found_goal:
-                    self.r *= 0.8
-                    print "New Batch"
+                if found_goal == True:
+                    #self.r *= 0.8
+                    print "Batch: ", iterations
                     # Prune the tree
                     self.Prune(self.g_scores[self.goal_id])
-                    # Add values to the samples
-                    self.samples.update(self.Sample(m=100, c_max=self.g_scores[self.goal_id]))
+                    self.samples.update(self.Sample(m=200, c_max=self.g_scores[self.goal_id]))
+                    found_goal = False
+                    self.samples[self.goal_id] = self.goal_config
                     print "Radius: ", self.r
-
+                else:
+                    #self.samples.update(self.Sample(m=20, c_max=self.g_scores[self.goal_id]))
+                    pass
                 # Make the old vertices the new vertices
                 self.v_old += self.tree.vertices.keys()
                 # Add the vertices to the vertex queue
-                self.vertex_queue += self.tree.vertices.keys()
+                for node_id in self.tree.vertices.keys():
+                    if node_id not in self.vertex_queue:
+                        self.vertex_queue.append(node_id)
                 # Change the size of the radius
                 #self.r = self.radius(len(self.tree.vertices) + len(self.samples))
+            #print "Vertex Queue: ", self.vertex_queue
 
             # Expand the best vertices until an edge is better than the vertex
             while(self.BestVertexQueueValue() <= self.BestEdgeQueueValue()):
                 self.ExpandVertex(self.BestInVertexQueue())
 
-            print "Vertex Queue: ", self.vertex_queue
             # Add the best edge to the tree 
             best_edge = self.BestInEdgeQueue()
             self.edge_queue.remove(best_edge)
+
             # See if it can improve the solution
             estimated_cost_of_vertex = self.g_scores[best_edge[0]] + self.planning_env.ComputeDistance(best_edge[0], best_edge[1]) + self.planning_env.ComputeHeuristicCost(best_edge[1], self.goal_id)
             estimated_cost_of_edge = self.planning_env.ComputeDistance(self.start_id,best_edge[0]) + self.planning_env.ComputeDistance(best_edge[0], best_edge[1]) + self.planning_env.ComputeHeuristicCost(best_edge[1], self.goal_id)
@@ -97,6 +101,7 @@ class BITStarPlanner(object):
                         first_config = self.planning_env.discrete_env.NodeIdToConfiguration(best_edge[0])
                         next_config = self.planning_env.discrete_env.NodeIdToConfiguration(best_edge[1])
                         path = self.con(first_config, next_config)
+                        last_edge = self.planning_env.discrete_env.ConfigurationToNodeId(next_config)
                         if path == None or len(path) == 0: # no path
                             continue
                         next_config = path[len(path)-1,:]
@@ -115,10 +120,12 @@ class BITStarPlanner(object):
                             except(KeyError):
                                 pass
                             eid = self.tree.AddVertex(next_config)
-                        if eid == self.goal_id:
+                        if eid == self.goal_id or best_edge[0] == self.goal_id or best_edge[1] == self.goal_id:
+                            print "Found goal!"
+                            iterations += 1
                             found_goal = True
 
-                        self.tree.AddEdge(best_edge[0], best_edge[1])
+                        self.tree.AddEdge(best_edge[0], eid)
 
                         g_score = self.planning_env.ComputeDistance(best_edge[0], best_edge[1])
                         self.g_scores[best_edge[1]] = g_score + self.g_scores[best_edge[0]]
@@ -130,15 +137,30 @@ class BITStarPlanner(object):
                         for edge in self.edge_queue:
                             if edge[0] == best_edge[1]:
                                 if self.g_scores[edge[0]] + self.planning_env.ComputeDistance(edge[0], best_edge[1]) >= self.g_scores[self.goal_id]:
-                                    self.edge_queue.remove((edge[0], best_edge[1])) 
+                                    if (edge[0], best_edge[1]) in self.edge_queue:
+                                        self.edge_queue.remove((edge[0], best_edge[1])) 
                             if(edge[1] == best_edge[1]):
                                 if(self.g_scores[edge[1]] + self.planning_env.ComputeDistance(edge[1], best_edge[1]) >= self.g_scores[self.goal_id]):
-                                    self.edge_queue.remove((edge[1], best_edge[1])) 
+                                    if (last_edge, best_edge[1]) in self.edge_queue:
+                                        self.edge_queue.remove((last_edge, best_edge[1])) 
             else:
+                print "Nothing good"
                 self.edge_queue = []
                 self.vertex_queue = []
 
-            iterations += 1
+        # Return a plan
+        plan.append(goal_config)
+        curr_id = self.goal_id
+        while(curr_id != self.start_id):
+            print "Current ID: ", curr_id
+            curr_id = self.tree.edges[curr_id] # Get the vertex opposite the edge of the current id
+            plan.append(self.tree.vertices[curr_id]) # Add the new vertex to plan
+
+        # Whenever the current id is the start id, append start id
+        plan.append(self.tree.vertices[self.start_id])
+        plan = plan[::-1] # reverse 
+        return numpy.array(plan), len(self.tree.vertices)
+
 
     '''
     Function to expand a vertex
@@ -169,7 +191,6 @@ class BITStarPlanner(object):
 
 
         #print "Edge queue after expansion on neighbors: ", self.edge_queue
-
         # Add the vertex to the edge queue
         if vid not in self.v_old:
             possible_neighbors = []

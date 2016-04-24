@@ -123,7 +123,7 @@ class SimpleEnvironment(object):
         start_config = numpy.array(self.discrete_env.NodeIdToConfiguration(start_id))
         goal_config = numpy.array(self.discrete_env.NodeIdToConfiguration(goal_id))
 
-        return numpy.linalg.norm(start_config - goal_config, 1)
+        return numpy.linalg.norm(start_config - goal_config, 2)
         
     def GenerateRandomConfiguration(self):
         config = [0] * 2;
@@ -219,6 +219,21 @@ class SimpleEnvironment(object):
         scale[1,1] = ((c_max**2 - c_min**2)**0.5)/2 
 
         return scale
+
+    def extend_collision_check(self, start_config, end_config):
+        #
+        # TODO: Implement a function which attempts to extend from 
+        #   a start configuration to a goal configuration
+        #
+        steps = self.ComputeDistance(start_config, end_config)*25 # Get 25 times the number of unit values in the distance space
+        x = numpy.linspace(start_config[0], end_config[0], num=steps) # Get the interpolated x values
+        y = numpy.linspace(start_config[1], end_config[1], num=steps) # Get the interpolated y values
+        # Check the interpolated path for collisions
+        for i in xrange(0, len(x)):
+            if(collision_check(x[i], y[i]) == True): # If in collision
+                return True
+        # If no part of the path is in collision
+        return False
 
     def InitializePlot(self, goal_config):
         self.fig = pl.figure()
