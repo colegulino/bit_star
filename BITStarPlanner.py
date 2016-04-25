@@ -46,7 +46,7 @@ class BITStarPlanner(object):
 
         # Specifies the number of iterations
         iterations = 0
-        max_iter = 2
+        max_iter = 500
 
         print "Start ID: ", self.start_id
         print "Goal ID: ", self.goal_id
@@ -122,7 +122,6 @@ class BITStarPlanner(object):
                             eid = self.tree.AddVertex(next_config)
                         if eid == self.goal_id or best_edge[0] == self.goal_id or best_edge[1] == self.goal_id:
                             print "Found goal!"
-                            iterations += 1
                             found_goal = True
 
                         self.tree.AddEdge(best_edge[0], eid)
@@ -147,6 +146,9 @@ class BITStarPlanner(object):
                 print "Nothing good"
                 self.edge_queue = []
                 self.vertex_queue = []
+            iterations += 1
+            print "Iteration: ", iterations
+
 
         # Return a plan
         plan.append(goal_config)
