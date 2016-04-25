@@ -8,8 +8,8 @@ class RRTTree(object):
         self.planning_env = planning_env
         self.vertices = dict()
         vid = self.planning_env.discrete_env.ConfigurationToNodeId(start_config)
-        self.vertices[vid] = start_config
-        self.edges = dict()
+        self.vertices[vid] = [] # Changed to a list of edges
+        self.edges = [] # list of tuples that create edges
         self.start_config=start_config
 
     def GetRootId(self):
@@ -52,9 +52,12 @@ class RRTTree(object):
 
     def AddVertex(self, config):
         vid = self.planning_env.discrete_env.ConfigurationToNodeId(config)
-        self.vertices[vid] = config
+        self.vertices[vid] = []
         return vid
 
     def AddEdge(self, sid, eid):
-        self.edges[eid] = sid
+        if (sid, eid) not in self.edges:
+            self.edges.append((sid,eid))
+        self.vertices[sid].append(eid)
+        self.vertices[eid].append(sid)
 

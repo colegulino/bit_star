@@ -109,11 +109,15 @@ class BITStarPlanner(object):
                         best_edge = (best_edge[0], last_config_in_path_id)
                         if(best_edge[1] in self.tree.vertices.keys()):
                             edges_to_delete = []
-                            for sid, eid in self.tree.edges.iteritems():
-                                if eid == best_edge[1]:
-                                    edges_to_delete.append(sid)
-                            for sid in edges_to_delete:
-                                del self.tree.edges[sid]
+                            for nid in self.tree.edges:
+                                if nid[1] == best_edge[1]:
+                                    #edges_to_delete.append(sid)
+                                    self.tree.edges.remove(nid)
+                                    self.tree.vertices[nid[0]].remove(nid[1])
+                                    self.tree.vertices[nid[1]].remove(nid[0])
+                                    self.UpdateGraph()
+                            #for sid in edges_to_delete:
+                            #    del self.tree.edges[sid]
                         else:
                             try:
                                 del self.samples[best_edge[1]]
@@ -129,6 +133,7 @@ class BITStarPlanner(object):
                         g_score = self.planning_env.ComputeDistance(best_edge[0], best_edge[1])
                         self.g_scores[best_edge[1]] = g_score + self.g_scores[best_edge[0]]
                         self.f_scores[best_edge[1]] = g_score + self.planning_env.ComputeHeuristicCost(best_edge[1], self.goal_id)
+                        self.UpdateGraph()
 
                         if self.visualize:
                             self.planning_env.PlotEdge(first_config, next_config)
@@ -149,17 +154,19 @@ class BITStarPlanner(object):
             iterations += 1
             print "Iteration: ", iterations
 
-
         # Return a plan
-        plan.append(goal_config)
+        plan.append(self.goal_config)
         curr_id = self.goal_id
         while(curr_id != self.start_id):
             print "Current ID: ", curr_id
-            curr_id = self.tree.edges[curr_id] # Get the vertex opposite the edge of the current id
-            plan.append(self.tree.vertices[curr_id]) # Add the new vertex to plan
+            next_vertices = self.tree.vertices[curr_id]
+            curr_id = min(next_vertices, key=lambda x : self.g_scores[x])
+            plan.append(self.planning_env.discrete_env.NodeIdToConfiguration(curr_id))
+            #curr_id = self.tree.edges[curr_id] # Get the vertex opposite the edge of the current id
+            #plan.append(self.tree.vertices[curr_id]) # Add the new vertex to plan
 
         # Whenever the current id is the start id, append start id
-        plan.append(self.tree.vertices[self.start_id])
+        plan.append(self.start_config)
         plan = plan[::-1] # reverse 
         return numpy.array(plan), len(self.tree.vertices)
 
@@ -173,7 +180,7 @@ class BITStarPlanner(object):
         self.vertex_queue.remove(vid)
 
         # Get the current configure from the vertex 
-        curr_config = numpy.array(self.tree.vertices[vid])
+        curr_config = numpy.array(self.planning_env.discrete_env.NodeIdToConfiguration(vid))
 
         # Get a nearest value in vertex for every one in samples where difference is less than the radius
         possible_neighbors = [] # possible sampled configs that are within radius
@@ -196,8 +203,8 @@ class BITStarPlanner(object):
         # Add the vertex to the edge queue
         if vid not in self.v_old:
             possible_neighbors = []
-            for vid, v_config in self.tree.vertices.iteritems():
-                v_config = numpy.array(v_config)
+            for vid, edges in self.tree.vertices.iteritems():
+                v_config = numpy.array(self.planning_env.discrete_env.NodeIdToConfiguration(vid))
                 if(numpy.linalg.norm(v_config - curr_config,2) <= self.r):
                     possible_neighbors.append((vid, v_config))
 
@@ -219,17 +226,36 @@ class BITStarPlanner(object):
         #print "Samples", self.samples
         self.samples = {node_id:config for node_id, config in self.samples.iteritems() if self.planning_env.ComputeDistance(self.start_id, node_id) + self.planning_env.ComputeHeuristicCost(node_id, self.goal_id) <= c}
         # Remove vertices whose estimated cost to goal is > c
-        self.tree.vertices = {node_id:config for node_id, config in self.tree.vertices.iteritems() if self.f_scores[node_id] <= c}
+        #self.tree.vertices = {node_id:config for node_id, config in self.tree.vertices.iteritems() if self.f_scores[node_id] <= c}
+        vertices_to_delete = []
+        for vertex, edges in self.tree.vertices.iteritems():
+            if self.f_scores[vertex] > c or self.f_scores[vertex] == float("inf"):
+                # Delete the vertex and all of its edges
+                for edge in edges:
+                    self.tree.vertices[edge].remove(vertex)
+                    if (edge, vertex) in self.tree.edges:
+                        self.tree.edges.remove((edge,vertex))
+                    if (vertex, edge) in self.tree.edges:
+                        self.tree.edges.remove((vertex,edge))
+                vertices_to_delete.append(vertex)
+        for vertex in vertices_to_delete:
+            del self.tree.vertices[vertex]
+
         # Remove edge if either vertex connected to its estimated cost to goal is > c
-        self.tree.edges = {eid:sid for eid, sid in self.tree.edges.iteritems() if self.f_scores[eid] < c and self.f_scores[sid] <= c}
+        #self.tree.edges = {eid:sid for eid, sid in self.tree.edges.iteritems() if self.f_scores[eid] < c and self.f_scores[sid] <= c}
+        for nid in self.tree.edges:
+            if self.f_scores[nid[0]] > c or self.f_scores[nid[1]] > c:
+                self.tree.vertices[nid[0]].remove(nid[1])
+                self.tree.vertices[nid[1]].remove(nid[0])
+                self.tree.edges.remove((nid[0], nid[1]))
         # Add vertices to samples if its g_score is infinity
         new_samples = {node_id:config for node_id, config in self.tree.vertices.iteritems() if self.g_scores[node_id] == float("inf")}
         for node_id, config in new_samples:
             if node_id not in self.samples.keys():
                 self.samples[node_id] = config
         # Remove vertices whose g_score is infinity
-        self.tree.vertices = {node_id:config for node_id, config in self.tree.vertices.iteritems() if self.g_scores[node_id] != float("inf")}
-
+        #self.tree.vertices = {node_id:config for node_id, config in self.tree.vertices.iteritems() if self.g_scores[node_id] != float("inf")}
+        self.UpdateGraph()
     '''
     Function to extend between two configurations
     '''
@@ -348,3 +374,27 @@ class BITStarPlanner(object):
 
         return v_and_values[0][0]
 
+    def UpdateGraph(self):
+        # Open queue
+        queue = []
+        queue.append(self.start_id)
+        visited = [] # visited nodes
+        current_id = self.start_id
+
+        while len(queue) != 0:
+            # Get the head of the queue
+            current_id = queue.pop(0)  
+            successors = self.tree.vertices[current_id]
+            # Find a non-visited successor to the current_id
+            for successor in successors:
+                if(successor not in visited):
+                    visited += [successor]
+                    queue += [successor]
+                    # Calculate the tentative g score
+                    successor_config = self.planning_env.discrete_env.NodeIdToConfiguration(successor)
+                    g_score = self.g_scores[current_id] + self.planning_env.ComputeDistance(current_id, successor)
+                    if g_score >= self.g_scores[successor]:
+                        continue
+                    # Update g and f scores
+                    self.g_scores[successor] = g_score
+                    self.f_scores[successor] = g_score + self.planning_env.ComputeHeuristicCost(successor, self.goal_id) 
