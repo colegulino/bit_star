@@ -24,25 +24,6 @@ class AStarPlanner(object):
         if(self.visualize): # initialize plot
             self.planning_env.InitializePlot(goal_config)
  
-        # implement a priority queue
-        start_id = self.planning_env.discrete_env.ConfigurationToNodeId(start_config)
-        goal_id = self.planning_env.discrete_env.ConfigurationToNodeId(goal_config)
-        class Node(object):
-            def __init__(self, node_id, config, g_score, goal_id, planning_env, distance_from_start = float("inf")):
-                self.node_id = node_id
-                self.config = config
-                self.g_score = g_score
-                self.h_score = planning_env.ComputeHeuristicCost(node_id, goal_id)
-                self.f_score = self.g_score + self.h_score
-                self.distance_from_start = distance_from_start
-            def __cmp__(self, other):
-                return cmp(self.f_score, other.f_score)
-
-        priority_queue = Queue.PriorityQueue()
-
-        # Open queue
-        priority_queue.put(Node(start_id, start_config, 0, goal_id, self.planning_env, 0)) # input start node to queue
-
         # Initialize lists
         closed_set = []
         open_set = []

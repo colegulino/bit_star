@@ -47,7 +47,7 @@ class BITStarPlanner(object):
 
         # Specifies the number of iterations
         iterations = 0
-        max_iter = 200
+        max_iter = 500
 
         print "Start ID: ", self.start_id
         print "Goal ID: ", self.goal_id
@@ -103,7 +103,7 @@ class BITStarPlanner(object):
                         last_config_in_path_id = self.planning_env.discrete_env.ConfigurationToNodeId(next_config)
                         best_edge = (best_edge[0], last_config_in_path_id)
                         if(best_edge[1] in self.tree.vertices.keys()):
-                            edges_to_delete = []
+                            '''
                             for nid in self.tree.edges:
                                 if nid[1] == best_edge[1]:
                                     #edges_to_delete.append(sid)
@@ -111,6 +111,7 @@ class BITStarPlanner(object):
                                     self.tree.vertices[nid[0]].remove(nid[1])
                                     self.tree.vertices[nid[1]].remove(nid[0])
                                     self.UpdateGraph()
+                            '''
                         else:
                             try:
                                 del self.samples[best_edge[1]]
@@ -147,8 +148,7 @@ class BITStarPlanner(object):
                 self.edge_queue = []
                 self.vertex_queue = []
             iterations += 1
-            print "Iteration: ", iterations
-            self.UpdateGraph()
+            #print "Iteration: ", iterations
 
         print "Find the plan"
 
@@ -386,7 +386,7 @@ class BITStarPlanner(object):
 
             # Check to see if you are at goal
             if(curr_id == self.goal_id):
-                print "Found goal"
+                #print "Found goal"
                 self.nodes[self.goal_id]
                 found_goal = True
                 break 

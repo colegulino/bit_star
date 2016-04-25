@@ -49,7 +49,6 @@ class RRTTree(object):
 
         return vid, self.vertices[vid]
 
-
     def AddVertex(self, config):
         vid = self.planning_env.discrete_env.ConfigurationToNodeId(config)
         self.vertices[vid] = []
