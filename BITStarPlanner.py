@@ -104,13 +104,15 @@ class BITStarPlanner(object):
                         best_edge = (best_edge[0], last_config_in_path_id)
                         if(best_edge[1] in self.tree.vertices.keys()):
                             '''
-                            for nid in self.tree.edges:
-                                if nid[1] == best_edge[1]:
-                                    #edges_to_delete.append(sid)
-                                    self.tree.edges.remove(nid)
-                                    self.tree.vertices[nid[0]].remove(nid[1])
-                                    self.tree.vertices[nid[1]].remove(nid[0])
-                                    self.UpdateGraph()
+                            for vertex in self.tree.vertices[best_edge[1]]:
+                                self.tree.vertices[vertex].remove(best_edge[1])
+                                if (vertex, best_edge[1]) in self.tree.edges:
+                                    self.tree.edges.remove((vertex, best_edge[1]))
+                                if (best_edge[1], vertex) in self.tree.edges:
+                                    self.tree.edges.remove((best_edge[1], vertex))
+                            del self.tree.vertices[best_edge[1]][:]
+                            self.tree.edges.remove()
+                            self.UpdateGraph()
                             '''
                         else:
                             try:
