@@ -240,6 +240,7 @@ class BITStarPlanner(object):
                 vertices_to_delete.append(vertex)
         for vertex in vertices_to_delete:
             del self.tree.vertices[vertex]
+        self.UpdateGraph()
 
         # Remove edge if either vertex connected to its estimated cost to goal is > c
         #self.tree.edges = {eid:sid for eid, sid in self.tree.edges.iteritems() if self.f_scores[eid] < c and self.f_scores[sid] <= c}
