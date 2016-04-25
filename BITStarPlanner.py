@@ -51,8 +51,8 @@ class BITStarPlanner(object):
         print "Start ID: ", self.start_id
         print "Goal ID: ", self.goal_id
 
-        self.samples.update(self.Sample(m=100))
-        self.r = 2.0
+        self.samples.update(self.Sample(m=300))
+        self.r = 1.0
         # Initalize the g_score of the goal
         # run until done
         found_goal = False
@@ -64,7 +64,7 @@ class BITStarPlanner(object):
                     print "Batch: ", iterations
                     # Prune the tree
                     self.Prune(self.g_scores[self.goal_id])
-                    self.samples.update(self.Sample(m=200, c_max=self.g_scores[self.goal_id]))
+                    self.samples.update(self.Sample(m=100, c_max=self.g_scores[self.goal_id]))
                     found_goal = False
                     self.samples[self.goal_id] = self.goal_config
                     print "Radius: ", self.r
@@ -124,6 +124,7 @@ class BITStarPlanner(object):
                             except(KeyError):
                                 pass
                             eid = self.tree.AddVertex(next_config)
+                            self.vertex_queue.append(eid) 
                         if eid == self.goal_id or best_edge[0] == self.goal_id or best_edge[1] == self.goal_id:
                             print "Found goal!"
                             found_goal = True
@@ -233,6 +234,7 @@ class BITStarPlanner(object):
                 # Delete the vertex and all of its edges
                 for edge in edges:
                     self.tree.vertices[edge].remove(vertex)
+                    self.tree.vertices[vertex].remove[edge]
                     if (edge, vertex) in self.tree.edges:
                         self.tree.edges.remove((edge,vertex))
                     if (vertex, edge) in self.tree.edges:
