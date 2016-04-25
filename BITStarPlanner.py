@@ -47,12 +47,12 @@ class BITStarPlanner(object):
 
         # Specifies the number of iterations
         iterations = 0
-        max_iter = 500
+        max_iter = 1500
 
         print "Start ID: ", self.start_id
         print "Goal ID: ", self.goal_id
 
-        self.samples.update(self.Sample(m=300))
+        self.samples.update(self.Sample(m=200))
         self.r = 1.0
 
         # run until done
@@ -150,7 +150,7 @@ class BITStarPlanner(object):
                 self.edge_queue = []
                 self.vertex_queue = []
             iterations += 1
-            #print "Iteration: ", iterations
+            print "Iteration: ", iterations
 
         print "Find the plan"
 
@@ -158,9 +158,6 @@ class BITStarPlanner(object):
         plan.append(self.goal_config)
         curr_id = self.goal_id
         while(curr_id != self.start_id):
-            #print "Edges: ", self.tree.vertices[curr_id]
-            #next_vertices = self.tree.vertices[curr_id]
-            #next_id = min(next_vertices, key=lambda x : self.g_scores[x])
             print "Current ID: ", curr_id
             #self.tree.vertices[curr_id].remove(next_id)
             #curr_id = next_id
@@ -250,11 +247,13 @@ class BITStarPlanner(object):
                     self.tree.vertices[nid[1]].remove(nid[0])
                 self.tree.edges.remove((nid[0], nid[1]))
         # Add vertices to samples if its g_score is infinity
+        '''
         new_samples = {node_id:config for node_id, config in self.tree.vertices.iteritems() if self.g_scores[node_id] == float("inf")}
         for node_id, config in new_samples:
             if node_id not in self.samples.keys():
                 self.samples[node_id] = config
-
+        '''
+        self.ReturnDisconnected()
         self.UpdateGraph()
     '''
     Function to extend between two configurations
@@ -422,10 +421,8 @@ class BITStarPlanner(object):
     def UpdateGraphPrint(self):
         # Initialize lists
         closed_set = []
-        open_set = []
-        g_scores = dict()
-        f_scores = dict()      
-        current_id = self.start_id
+        open_set = []     
+        current_id = selfstart_id
         open_set.append(self.start_id)
 
         # Initialize plot
@@ -489,3 +486,33 @@ class BITStarPlanner(object):
                         pred_config = self.planning_env.discrete_env.NodeIdToConfiguration(curr_id)
                         succ_config = self.planning_env.discrete_env.NodeIdToConfiguration(successor)
                         self.planning_env.PlotEdge(pred_config, succ_config)  
+
+    def ReturnDisconnected(self):
+        # Open queue
+        queue = []
+        queue.append(self.start_id)
+        visited = [] # visited nodes
+        current_id = self.start_id
+
+        found_goal = False
+
+        while len(queue) != 0:
+            # Get the head of the queue
+            current_id = queue.pop(0)
+            successors = self.tree.vertices[current_id]
+            # Find a non-visited successor to the current_id
+            for successor in successors:
+                if(successor not in visited):
+                    visited += [successor]
+                    queue += [successor]
+
+        for vertex, edges in self.tree.vertices.iteritems():
+            if vertex not in visited:
+                for edge in edges:
+                    self.tree.vertices[edge].remove(vertex)
+                    if (edge, vertex) in self.tree.edges:
+                        self.tree.edges.remove((edge,vertex))
+                    if (vertex, edge) in self.tree.edges:
+                        self.tree.edges.remove((edge,vertex))
+                del self.tree.vertices[vertex]
+                self.samples[vertex] = self.planning_env.discrete_env.NodeIdToConfiguration(vertex)
