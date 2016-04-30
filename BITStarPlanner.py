@@ -47,7 +47,7 @@ class BITStarPlanner(object):
 
         # Specifies the number of iterations
         iterations = 0
-        max_iter = 1500
+        max_iter = 100
 
         print "Start ID: ", self.start_id
         print "Goal ID: ", self.goal_id
@@ -60,8 +60,6 @@ class BITStarPlanner(object):
         while(iterations < max_iter):
             # Add the start of a new batch
             if len(self.vertex_queue) == 0 and len(self.edge_queue) == 0:
-                #if found_goal == True:
-                #self.r *= 0.8
                 print "Batch: ", iterations
                 # Prune the tree
                 #self.Prune(self.g_scores[self.goal_id])
@@ -168,7 +166,6 @@ class BITStarPlanner(object):
         plan.append(self.start_config)
         plan = plan[::-1] # reverse 
         return numpy.array(plan), len(self.tree.vertices)
-
 
     '''
     Function to expand a vertex
